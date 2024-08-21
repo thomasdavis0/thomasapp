@@ -1,17 +1,40 @@
 require('dotenv').config();
-const { App } = require('@slack/bolt');
-const express = require('express');
-const axios = require('axios');
 
-// Initialize the Slack Bolt App
-const slackApp = new App({
-  token: process.env.SLACK_BOT_TOKEN,
-  signingSecret: process.env.SLACK_SIGNING_SECRET
+const { App, ExpressReceiver } = require('@slack/bolt');
+const express = require('express');
+const path = require('path');
+
+// Initialize your own ExpressReceiver
+const receiver = new ExpressReceiver({
+  signingSecret: process.env.SLACK_SIGNING_SECRET,
+  clientId: process.env.SLACK_CLIENT_ID,
+  clientSecret: process.env.SLACK_CLIENT_SECRET,
+  stateSecret: process.env.STATE_SECRET,
+  scopes: ['commands', 'chat:write', 'app_mentions:read', 'channels:history'],
+  installerOptions: {
+    redirectUriPath: '/slack/oauth_redirect',
+    directInstall: true,
+  },
+  installationStore: {
+    storeInstallation: async (installation) => {
+      // Add logic here to store the installation details securely
+      console.log('Installation stored:', installation);
+    },
+    fetchInstallation: async (installQuery) => {
+      // Fetch the installation details using the installQuery object
+      console.log('Installation fetched:', installQuery);
+    },
+  },
 });
 
-// Slack message handling
-slackApp.message('hello', async ({ message, say }) => {
-  console.log('Received hello');
+const app = new App({
+  token: process.env.SLACK_BOT_TOKEN,
+  receiver: receiver,
+});
+
+// Listens to incoming messages that contain "hello"
+app.message('hello', async ({ message, say }) => {
+  console.log('hello');
   await say({
     blocks: [
       {
@@ -26,39 +49,10 @@ slackApp.message('hello', async ({ message, say }) => {
   });
 });
 
-// Initialize an Express application
-const app = express();
+// Static files route for OAuth
+receiver.app.use('/static', express.static(path.join(__dirname, 'public')));
 
-// Route to handle OAuth redirect
-app.get('/oauth_redirect', async (req, res) => {
-  const { code } = req.query;
-  try {
-    const response = await axios.post('https://slack.com/api/oauth.v2.access', null, {
-      params: {
-        code,
-        client_id: process.env.SLACK_CLIENT_ID,
-        client_secret: process.env.SLACK_CLIENT_SECRET,
-        redirect_uri: 'YOUR_REDIRECT_URI'
-      }
-    });
-    if (response.data.ok) {
-      res.send('App installed successfully!');
-    } else {
-      res.send('Failed to install the app.');
-    }
-  } catch (error) {
-    console.error('Failed to exchange the OAuth code:', error);
-    res.status(500).send('Server Error');
-  }
-});
-
-// Start both the Slack and Express apps
 (async () => {
-  // Start your Slack app
-  await slackApp.start(process.env.PORT || 3000);
+  await app.start(process.env.PORT || 3000);
   console.log('⚡️ Bolt app is running!');
-  // Start Express server on the same port
-  app.listen(process.env.PORT || 3000, () => {
-    console.log('Server is running!');
-  });
 })();
