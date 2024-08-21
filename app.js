@@ -19,16 +19,17 @@ const receiver = new ExpressReceiver({
     storeInstallation: async (installation) => {
       // Add logic here to store the installation details securely
       console.log('Installation stored:', installation);
+      // Save installation data in your database or another storage mechanism
     },
     fetchInstallation: async (installQuery) => {
       // Fetch the installation details using the installQuery object
       console.log('Installation fetched:', installQuery);
+      // Retrieve installation data from your database or another storage mechanism
     },
   },
 });
 
 const app = new App({
-  token: process.env.SLACK_BOT_TOKEN,
   receiver: receiver,
 });
 
