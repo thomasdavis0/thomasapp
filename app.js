@@ -55,5 +55,5 @@ receiver.app.use('/static', express.static(path.join(__dirname, 'public')));
 
 (async () => {
   await app.start(process.env.PORT || 3000);
-  console.log('⚡️ Bolt app is running!');
+  console.log('⚡️ My Bolt app is running!');
 })();
